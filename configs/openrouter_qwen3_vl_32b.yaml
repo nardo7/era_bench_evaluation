@@ -1,0 +1,48 @@
+dataset:
+  paths:
+    - ../data/era_bench.hdf5
+  frame_stride: 20
+  sampled_fps: 1.0
+
+# Resolved relative to this configuration file; copy ../.env.example to ../.env.
+env_file: ../.env
+
+model:
+  # OpenRouter uses provider-qualified model slugs.
+  id: qwen/qwen3-vl-32b-instruct
+  served_name: qwen/qwen3-vl-32b-instruct
+
+server:
+  base_url: https://openrouter.ai/api/v1
+  # Export this variable before running; never store the key in this file.
+  api_key_env_name: OPENROUTER_API_KEY
+  timeout_seconds: 300
+
+generation:
+  max_tokens: 4096
+  # This OpenRouter model advertises the standard max_tokens parameter.
+  max_tokens_field: max_tokens
+  temperature: 0.0
+  top_p: 1.0
+  seed: 0
+  structured_output: true
+  request_overrides:
+    # Route only to endpoints that support requested parameters such as the
+    # JSON schema response format used by this evaluator.
+    provider:
+      require_parameters: true
+
+evaluation:
+  cameras: [table_cam, origin_top_cam]
+  prompt_mode: embodied
+  induce_rule_summary: true
+  induce_scene_descriptions: true
+  # Text-only is the safest initial cloud smoke test. To send standard PNG
+  # inputs, set this false and include_final_frames to true.
+  include_frames: false
+  include_final_frames: true
+  include_textual_grids: false
+  include_actions: true
+  output_dir: ../outputs/openrouter_qwen3_vl_32b
+  max_samples: 30
+  continue_on_error: false

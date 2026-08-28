@@ -1,0 +1,61 @@
+dataset:
+  paths:
+    - ../data/era_bench.hdf5
+  # The recordings are 20 Hz; stride 20 gives approximately 1 fps.
+  frame_stride: 20
+  sampled_fps: 1.0
+
+model:
+  id: Qwen/Qwen3-VL-8B-Instruct
+  served_name: qwen3-vl-8b
+  vllm_executable: vllm
+  # Keys are passed directly to `vllm serve` as `--<key> <value>`.
+  vllm_args:
+    dtype: auto
+    max-model-len: 16384
+    gpu-memory-utilization: 0.98
+    # One video modality per demonstration and one test image.
+    limit-mm-per-prompt:
+      video: 10
+      # Ten demonstrations with initial/final images plus the test image.
+      image: 21
+
+server:
+  base_url: http://127.0.0.1:8000/v1
+  # Leave null unless vLLM is launched with --api-key.
+  api_key: null
+  timeout_seconds: 300
+
+generation:
+  # Hybrid action objects are verbose; this covers a dense 8x8 output plan.
+  max_tokens: 4096
+  # vLLM supports OpenAI's newer completion-token field and request seed.
+  max_tokens_field: max_completion_tokens
+  # Deterministic decoding is preferable for evaluation. It still generates a
+  # new plan for the test input; it is not a demonstration-copying mechanism.
+  temperature: 0.0
+  top_p: 1.0
+  seed: 0
+  structured_output: true
+  # Additional Chat Completions request fields are passed through unchanged.
+  request_overrides:
+    mm_processor_kwargs:
+      # A scalar applies the same sampling rate to every demonstration video.
+      fps: 1.0
+
+evaluation:
+  cameras: [table_cam, origin_top_cam]
+  # embodied predicts actions; grid_focused predicts an output grid.
+  prompt_mode: embodied
+  induce_rule_summary: true
+  induce_scene_descriptions: true
+  # Text-only is the safest initial cloud smoke test. To send standard PNG
+  # inputs, set this false and include_final_frames to true.
+  include_frames: false
+  include_final_frames: true
+  include_textual_grids: false
+  include_actions: true
+  output_dir: ../outputs/qwen3_vl_8b
+  # Keep the first run small; set to null to evaluate the full dataset.
+  max_samples: 30
+  continue_on_error: false

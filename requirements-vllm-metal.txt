@@ -1,0 +1,4 @@
+# vllm-mlx 0.4.0 imports the video compatibility module removed in
+# mlx-vlm 0.6.4. Keep this pair pinned until vllm-mlx migrates to the new API.
+vllm-mlx==0.4.0
+mlx-vlm==0.6.3

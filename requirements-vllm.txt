@@ -1,0 +1,2 @@
+# Install this on the inference host in addition to requirements.txt.
+vllm

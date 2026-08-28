@@ -1,0 +1,9 @@
+data/
+__pycache__/
+.cache/
+outputs/
+.venv/
+.DS_Store
+.env
+.env.*
+!.env.example

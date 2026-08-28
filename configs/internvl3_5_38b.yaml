@@ -1,0 +1,53 @@
+dataset:
+  paths:
+    - ../../era_bench/datasets/era_bench.backup.hdf5
+  # The recordings are 20 Hz; stride 20 gives approximately 1 fps.
+  frame_stride: 20
+  sampled_fps: 1.0
+
+model:
+  id: OpenGVLab/InternVL3_5-38B-Instruct
+  served_name: internvl3.5-38b-instruct
+  vllm_executable: vllm
+  # Keys are passed directly to `vllm serve` as `--<key> <value>`.
+  vllm_args:
+    trust-remote-code: true
+    dtype: auto
+    # The largest task has 129 sampled video frames. At 256 visual tokens per
+    # InternVL frame, 32K would not leave room for prompt text and generation.
+    max-model-len: 40960
+    gpu-memory-utilization: 0.95
+    # One video modality per demonstration and one test image.
+    limit-mm-per-prompt:
+      video: 10
+      # Ten demonstrations with initial/final images plus the test image.
+      image: 21
+
+server:
+  base_url: http://127.0.0.1:8000/v1
+  # Leave null unless vLLM is launched with --api-key.
+  api_key: null
+  timeout_seconds: 300
+
+generation:
+  # Hybrid action objects are verbose; this covers a dense 8x8 output plan.
+  max_tokens: 4096
+  max_tokens_field: max_completion_tokens
+  temperature: 0.0
+  top_p: 1.0
+  seed: 0
+  structured_output: true
+
+evaluation:
+  # embodied predicts actions; grid_focused predicts an output grid.
+  prompt_mode: grid_focused
+  induce_rule_summary: false
+  # Frames add every demonstration video and the initial test image.
+  include_frames: true
+  # Add demo input/output grids and the test input grid as text.
+  include_textual_grids: true
+  include_actions: false
+  output_dir: ../outputs/internvl3_5_38b
+  # Set to null to evaluate the full dataset.
+  max_samples: 30
+  continue_on_error: false

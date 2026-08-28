@@ -1,0 +1,7 @@
+h5py
+pillow
+pydantic
+PyYAML
+torch
+imageio[ffmpeg]
+ruff

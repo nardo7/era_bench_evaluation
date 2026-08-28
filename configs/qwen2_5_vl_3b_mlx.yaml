@@ -1,0 +1,61 @@
+dataset:
+  paths:
+    - ../data/era_bench.hdf5
+  # The recordings are 20 Hz; stride 20 gives approximately 1 fps.
+  frame_stride: 20
+  sampled_fps: 1.0
+
+model:
+  # MLX weights encode their dtype/quantization, so there is no runtime dtype
+  # flag corresponding to vLLM's `dtype: auto`.
+  id: mlx-community/Qwen2.5-VL-3B-Instruct-4bit
+  served_name: qwen2.5-vl-3b
+  vllm_executable: vllm-mlx
+  # Keys are passed directly to `vllm-mlx serve` as `--<key> <value>`.
+  vllm_args:
+    # vllm-mlx has no max-model-len switch; these bound generated/requested
+    # completion tokens. Input context remains model-defined.
+    max-tokens: 32768
+    max-request-tokens: 32768
+    # This controls the KV cache only, not all unified memory. It is therefore
+    # intentionally not copied from vLLM's gpu-memory-utilization: 0.90.
+    cache-memory-percent: 0.20
+
+server:
+  base_url: http://127.0.0.1:8000/v1
+  # Leave null unless vllm-mlx is launched with --api-key.
+  api_key: null
+  timeout_seconds: 300
+
+generation:
+  # Hybrid action objects are verbose; this covers a dense 8x8 output plan.
+  max_tokens: 4096
+  # vllm-mlx documents the legacy Chat Completions token field.
+  max_tokens_field: max_tokens
+  # Deterministic decoding is preferable for evaluation. It still generates a
+  # new plan for the test input; it is not a demonstration-copying mechanism.
+  temperature: 0.0
+  top_p: 1.0
+  # Null omits the request field; vllm-mlx does not document a request seed.
+  # temperature 0 still selects greedy, deterministic decoding.
+  seed: null
+  structured_output: true
+  # Additional Chat Completions request fields are passed through unchanged.
+  request_overrides:
+    # A scalar applies the same sampling rate to every demonstration video.
+    video_fps: 1.0
+    # This is a cap per video, not for the whole prompt. Shorter videos are
+    # unaffected, while prompts with many 64-frame videos may still be large.
+    video_max_frames: 64
+
+evaluation:
+  output_dir: ../outputs/qwen2_5_vl_3b_mlx_smoke
+  # embodied predicts actions; grid_focused predicts an output grid.
+  prompt_mode: embodied
+  # Frames add every demonstration video and the initial test image.
+  include_frames: true
+  # Add demo input/output grids and the test input grid as text.
+  include_textual_grids: true
+  # Keep the first run small; set to null to evaluate the full dataset.
+  max_samples: 2
+  continue_on_error: false
