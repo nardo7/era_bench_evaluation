@@ -1,6 +1,6 @@
 dataset:
   paths:
-    - ../data/era_bench_background2.hdf5
+    - ../data/era_bench_cleaned.hdf5
   frame_stride: 20
   sampled_fps: 1.0
 
@@ -46,6 +46,6 @@ evaluation:
   include_textual_grids: true
   include_actions: true
 
-  output_dir: ../outputs/openrouter_gpt_5_6_luna
+  output_dir: ../outputs/openrouter_gpt_5_6_luna_cleaned
   max_samples: 77
   continue_on_error: false

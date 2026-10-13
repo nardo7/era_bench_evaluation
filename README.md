@@ -119,5 +119,17 @@ python scripts/diagnose_grid_perception.py --help
 python scripts/diagnose_scene_description.py --help
 ```
 
+Both diagnostics accept `--shuffle-tasks` to shuffle whole tasks before applying
+`--max-tasks`. Shuffling is disabled by default (or explicitly with
+`--no-shuffle-tasks`). The optional `--seed` controls both model generation and
+task shuffling. It defaults to `generation.seed` from the config, or `0` if that
+setting is null, keeping the complete run consistent across conditions:
+
+```bash
+python scripts/diagnose_grid_perception.py \
+  --config configs/qwen2_5_vl_3b.yaml \
+  --shuffle-tasks --seed 42 --max-tasks 10
+```
+
 Their purpose, inputs, and scoring are documented in
 [Visual grid-perception diagnostic](docs/architecture.md#7-visual-grid-perception-diagnostic).

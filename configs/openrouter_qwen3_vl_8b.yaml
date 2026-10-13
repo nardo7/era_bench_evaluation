@@ -1,6 +1,6 @@
 dataset:
   paths:
-    - ../data/era_bench.hdf5
+    - ../data/era_bench_cleaned.hdf5
   frame_stride: 20
   sampled_fps: 1.0
 
@@ -44,7 +44,7 @@ evaluation:
   include_final_frames: true
   include_textual_grids: false
   include_actions: true
-  output_dir: ../outputs/qwen3_vl_8b
+  output_dir: ../outputs/qwen3_vl_8b_cleaned
   # Keep the first run small; set to null to evaluate the full dataset.
-  max_samples: 30
+  max_samples: 77
   continue_on_error: false

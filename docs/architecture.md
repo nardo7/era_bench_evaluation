@@ -286,6 +286,9 @@ integrated scene description using ordinary color names before strict numeric
 grid fields, and records that description alongside the scored transcription.
 All diagnostic media can be nearest-neighbor upscaled as a whole-scene
 ablation; the scale factor is recorded in output artifact names and metadata.
+The diagnostic CLI's optional run seed controls both task shuffling and model
+generation. When omitted, it uses `generation.seed`, falling back to `0` when
+that setting is null, so one seed reproduces the complete diagnostic condition.
 
 The diagnostic `cameras` parameter accepts `table_cam`, `origin_top_cam`, or
 both. `ArcTaskDataset.cameras` selects which `obs/<camera>` tensors to load and

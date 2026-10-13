@@ -5,14 +5,17 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import random
 import time
 from collections.abc import Iterator
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
 from src.datasets import (
     ArcTaskDataset,
     ArcTaskSample,
@@ -125,6 +128,8 @@ def run_grid_perception_diagnostic(
     response_format: ResponseFormat,
     output_dir: Path | None = None,
     max_tasks: int | None = None,
+    shuffle_tasks: bool = False,
+    seed: int | None = None,
     video_fps: float | None = None,
     cameras: tuple[str, ...] = ("table_cam",),
     image_scale: int = 1,
@@ -134,6 +139,7 @@ def run_grid_perception_diagnostic(
     fps = config.dataset.sampled_fps if video_fps is None else video_fps
     if fps <= 0:
         raise ValueError("video_fps must be positive")
+    seed = _effective_seed(config, seed)
     cameras = _normalize_cameras(cameras)
     selector = uniform_frame_indices(config.dataset.frame_stride)
     dataset = ArcTaskDataset(
@@ -142,7 +148,9 @@ def run_grid_perception_diagnostic(
         frame_index_selector=selector,
         cameras=cameras,
     )
-    task_indices = _task_indices(dataset, max_tasks)
+    task_indices = _task_indices(
+        dataset, max_tasks, shuffle_tasks=shuffle_tasks, shuffle_seed=seed
+    )
 
     destination = output_dir or (
         config.evaluation.output_dir / "grid_perception_diagnostic"
@@ -152,7 +160,7 @@ def run_grid_perception_diagnostic(
     client = VLLMClient(
         config.server,
         model=config.model.served_name,
-        generation=config.generation,
+        generation=replace(config.generation, seed=seed),
     )
     image_overrides = _processor_overrides(config, fps=None)
     demo_overrides = (
@@ -171,7 +179,9 @@ def run_grid_perception_diagnostic(
         "test_inputs": 0,
         "exact_grids": 0,
         "expected_grids": 0,
+        "all_grids_exact": 0,
     }
+    demo_context_exact = {task_id: True for task_id in task_indices}
     error_count = 0
     expected_records = sum(
         len(dataset.samples[indices[0]].demo_keys) + len(indices)
@@ -220,6 +230,12 @@ def run_grid_perception_diagnostic(
                         ),
                     )
                     raise
+            _update_all_grids_metrics(
+                totals,
+                demo_context_exact,
+                observation,
+                record.get("metrics"),
+            )
             combined = _record(
                 observation,
                 record,
@@ -245,6 +261,8 @@ def run_grid_perception_diagnostic(
         "video_fps": fps,
         "image_scale": image_scale,
         "task_count": len(task_indices),
+        "shuffle_tasks": shuffle_tasks,
+        "seed": seed,
         "record_count": totals["records"],
         "error_count": error_count,
         "valid_response_rate": _rate(totals["valid"], totals["records"]),
@@ -263,6 +281,9 @@ def run_grid_perception_diagnostic(
         "overall_grid_exact_match_rate": _rate(
             totals["exact_grids"], totals["expected_grids"]
         ),
+        "all_grids_exact_match_rate": _rate(
+            totals["all_grids_exact"], totals["tests"]
+        ),
         "exact_grid_count": totals["exact_grids"],
         "expected_grid_count": totals["expected_grids"],
     }
@@ -279,11 +300,14 @@ def run_scene_description_diagnostic(
     *,
     output_dir: Path | None = None,
     max_tasks: int | None = None,
+    shuffle_tasks: bool = False,
+    seed: int | None = None,
     cameras: tuple[str, ...] = ("table_cam",),
     image_scale: int = 1,
 ) -> dict[str, Any]:
     """Ask for a free-form cube inventory of each final/initial scene image."""
     _validate_options("final_frame", "json", max_tasks, image_scale)
+    seed = _effective_seed(config, seed)
     cameras = _normalize_cameras(cameras)
     selector = uniform_frame_indices(config.dataset.frame_stride)
     dataset = ArcTaskDataset(
@@ -292,7 +316,9 @@ def run_scene_description_diagnostic(
         frame_index_selector=selector,
         cameras=cameras,
     )
-    task_indices = _task_indices(dataset, max_tasks)
+    task_indices = _task_indices(
+        dataset, max_tasks, shuffle_tasks=shuffle_tasks, shuffle_seed=seed
+    )
     expected_records = sum(
         len(dataset.samples[indices[0]].demo_keys) + len(indices)
         for indices in task_indices.values()
@@ -308,7 +334,7 @@ def run_scene_description_diagnostic(
     client = VLLMClient(
         config.server,
         model=config.model.served_name,
-        generation=config.generation,
+        generation=replace(config.generation, seed=seed),
     )
     request_overrides = _processor_overrides(config, fps=None)
     completed_count = 0
@@ -380,6 +406,8 @@ def run_scene_description_diagnostic(
         "cameras": list(cameras),
         "image_scale": image_scale,
         "task_count": len(task_indices),
+        "shuffle_tasks": shuffle_tasks,
+        "seed": seed,
         "record_count": expected_records,
         "completed_count": completed_count,
         "error_count": error_count,
@@ -676,16 +704,27 @@ def _test_media(
 
 
 def _task_indices(
-    dataset: ArcTaskDataset, max_tasks: int | None
+    dataset: ArcTaskDataset,
+    max_tasks: int | None,
+    *,
+    shuffle_tasks: bool = False,
+    shuffle_seed: int = 0,
 ) -> dict[str, list[int]]:
-    selected: dict[str, list[int]] = {}
+    """Select whole tasks, preserving the order of test pairs within each task."""
+    grouped: dict[str, list[int]] = {}
     for index, task_ref in enumerate(dataset.samples):
-        if task_ref.task_id not in selected:
-            if max_tasks is not None and len(selected) >= max_tasks:
-                continue
-            selected[task_ref.task_id] = []
-        selected[task_ref.task_id].append(index)
-    return selected
+        grouped.setdefault(task_ref.task_id, []).append(index)
+    task_ids = list(grouped)
+    if shuffle_tasks:
+        random.Random(shuffle_seed).shuffle(task_ids)
+    return {task_id: grouped[task_id] for task_id in task_ids[:max_tasks]}
+
+
+def _effective_seed(config: EvaluationConfig, seed: int | None) -> int:
+    """Resolve one run seed shared by model generation and task selection."""
+    if seed is not None:
+        return seed
+    return config.generation.seed if config.generation.seed is not None else 0
 
 
 def _update_totals(
@@ -708,6 +747,28 @@ def _count_expected(totals: dict[str, int], observation: dict[str, Any]) -> None
     totals["records"] += 1
     totals["expected_grids"] += 2 if is_demo else 1
     totals["demos" if is_demo else "tests"] += 1
+
+
+def _update_all_grids_metrics(
+    totals: dict[str, int],
+    demo_context_exact: dict[str, bool],
+    observation: dict[str, Any],
+    metrics: dict[str, Any] | None,
+) -> None:
+    """Combine shared demonstration results with each test-pair result."""
+    task_id = observation["task_id"]
+    if observation["observation_type"] == "demonstration":
+        demo_context_exact[task_id] = demo_context_exact[task_id] and bool(
+            metrics and metrics["both_grids_exact_match"]
+        )
+        return
+
+    all_grids_exact = demo_context_exact[task_id] and bool(
+        metrics and metrics["input_grid_exact_match"]
+    )
+    if metrics is not None:
+        metrics["all_grids_exact"] = all_grids_exact
+    totals["all_grids_exact"] += all_grids_exact
 
 
 def _record(

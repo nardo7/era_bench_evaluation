@@ -31,6 +31,20 @@ def parse_args() -> argparse.Namespace:
         help="Optional task limit; omitted means the complete dataset.",
     )
     parser.add_argument(
+        "--shuffle-tasks",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Shuffle task order before applying --max-tasks (default: disabled).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help=(
+            "Seed for model generation and task shuffling. Defaults to the "
+            "configured generation seed, or 0 when it is null."
+        ),
+    )
+    parser.add_argument(
         "--cameras",
         nargs="+",
         choices=SUPPORTED_CAMERAS,
@@ -53,6 +67,8 @@ def main() -> None:
         config,
         output_dir=args.output_dir,
         max_tasks=args.max_tasks,
+        shuffle_tasks=args.shuffle_tasks,
+        seed=args.seed,
         cameras=tuple(args.cameras),
         image_scale=args.image_scale,
     )

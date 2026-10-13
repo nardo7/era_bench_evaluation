@@ -1,6 +1,6 @@
 dataset:
   paths:
-    - ../data/era_bench.hdf5
+    - ../data/era_bench_cleaned.hdf5
   frame_stride: 20
   sampled_fps: 1.0
 
@@ -46,6 +46,6 @@ evaluation:
   include_final_frames: true
   include_textual_grids: false
   include_actions: true
-  output_dir: ../outputs/openrouter_qwen3_8_27b_old
+  output_dir: ../outputs/openrouter_qwen3_8_27b_cleaned
   max_samples: 77
   continue_on_error: false
