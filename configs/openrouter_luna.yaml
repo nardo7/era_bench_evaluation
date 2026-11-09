@@ -1,6 +1,6 @@
 dataset:
   paths:
-    - ../data/era_bench_cleaned.hdf5
+    - ../data/arc_embodied3.hdf5
   frame_stride: 20
   sampled_fps: 1.0
 
@@ -24,12 +24,15 @@ generation:
   max_tokens_field: max_tokens
   temperature: null
   top_p: null
-  seed: null
+  seed: 0
   structured_output: true
   request_overrides:
     # Route only to endpoints that support requested parameters such as the
     # JSON schema response format and disabled reasoning used by this evaluator.
     provider:
+      only: [openai]
+      order: [openai]
+      allow_fallbacks: true
       require_parameters: true
     reasoning:
       effort: none
@@ -46,6 +49,6 @@ evaluation:
   include_textual_grids: true
   include_actions: true
 
-  output_dir: ../outputs/openrouter_gpt_5_6_luna_cleaned
+  output_dir: ../outputs/openrouter_gpt_5_6_luna_arc3
   max_samples: 77
   continue_on_error: false

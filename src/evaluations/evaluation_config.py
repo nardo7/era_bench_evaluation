@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,11 @@ class GenerationConfig:
     request_overrides: dict[str, Any] = field(default_factory=dict)
 
 
+class VideoFormat(StrEnum):
+    JPEG_FRAMES = "jpeg_frames"
+    MP4 = "mp4"
+
+
 @dataclass(frozen=True)
 class EvaluationRunConfig:
     output_dir: Path
@@ -56,6 +62,8 @@ class EvaluationRunConfig:
     induce_scene_descriptions: bool = False
     include_final_frames: bool = False
     cameras: tuple[str, ...] = ("table_cam",)
+    video_format: VideoFormat = VideoFormat.JPEG_FRAMES
+    video_cache_dir: Path | None = None
 
     def __post_init__(self) -> None:
         """Normalize the output and required context for each prompt focus."""
@@ -126,6 +134,17 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
     )
     include_textual_grids = bool(evaluation_raw.get("include_textual_grids", False))
     include_actions = bool(evaluation_raw.get("include_actions", False))
+    video_format = VideoFormat(
+        evaluation_raw.get("video_format", VideoFormat.JPEG_FRAMES)
+    )
+    video_cache_dir_raw = evaluation_raw.get("video_cache_dir")
+    video_cache_dir = (
+        _resolve_path(base_dir, video_cache_dir_raw)
+        if video_cache_dir_raw is not None
+        else None
+    )
+    if video_cache_dir is not None and not video_cache_dir.exists():
+        raise ValueError(f"evaluation.video_cache_dir does not exist: {video_cache_dir}")
     cameras_raw = evaluation_raw.get("cameras", ["table_cam"])
     if isinstance(cameras_raw, str):
         cameras_raw = [cameras_raw]
@@ -194,6 +213,8 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
                 evaluation_raw.get("include_final_frames", False)
             ),
             cameras=tuple(cameras_raw),
+            video_format=video_format,
+            video_cache_dir=video_cache_dir,
         ),
     )
 

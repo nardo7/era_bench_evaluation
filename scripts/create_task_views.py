@@ -1,4 +1,4 @@
-"""Create task-centric hard-link views in an ERA Bench HDF5 dataset."""
+"""Create task-centric hard-link views in an ARC-Embodied HDF5 dataset."""
 
 import argparse
 import re

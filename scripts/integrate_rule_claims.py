@@ -59,7 +59,7 @@ def integrate_tasks(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Integrate inferred ARC rules into the ERA Bench HDF5 dataset."
+        description="Integrate inferred ARC rules into the ARC-Embodied HDF5 dataset."
     )
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET_PATH)
     parser.add_argument("--rules", type=Path, default=DEFAULT_RULES_PATH)

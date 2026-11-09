@@ -1,8 +1,9 @@
-# ERA Bench VLM evaluation
+# ERA-Bench Eval
 
-This project evaluates vision-language models on embodied ARC tasks recorded in
-Isaac Lab. Each evaluation sample combines the solved demonstrations for one ARC
-task with a held-out test pair. Models can predict either semantic robot actions
+ERA-Bench Eval is the evaluation software for ERA-Bench. It evaluates
+vision-language models on ARC-Embodied, the dataset generated with the
+ERA-Bench Sim simulation suite built on Isaac Lab. Each evaluation sample
+combines the solved demonstrations for one ARC task with a held-out test pair. Models can predict either semantic robot actions
 or a direct ARC output grid through an OpenAI-compatible endpoint.
 
 The repository supports local vLLM, Apple Silicon through vllm-mlx, and hosted
@@ -37,7 +38,7 @@ On Apple Silicon, install the pinned vllm-mlx stack instead:
 python -m pip install -r requirements-vllm-metal.txt
 ```
 
-The evaluator requires an ERA Bench HDF5 file with task-centric views. Set
+The evaluator requires an ARC-Embodied HDF5 file with task-centric views. Set
 `dataset.paths` in the selected file under `configs/` to that dataset. Dataset
 preparation and the complete raw/task-view layouts are documented in
 [HDF5 preparation and layout](docs/architecture.md#hdf5-preparation-and-layout).
@@ -71,14 +72,6 @@ small `evaluation.max_samples` value, then set it to `null` for a full run.
 Configuration behavior and artifact naming are described in
 [Evaluation data flow](docs/architecture.md#evaluation-data-flow).
 
-### Apple Silicon
-
-Use the MLX configuration for both processes:
-
-```bash
-python scripts/serve_vllm.py --config configs/qwen2_5_vl_3b_mlx.yaml
-python scripts/evaluate_vlm.py --config configs/qwen2_5_vl_3b_mlx.yaml
-```
 
 ### Hosted endpoint
 
