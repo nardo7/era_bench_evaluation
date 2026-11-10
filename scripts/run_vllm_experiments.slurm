@@ -2,9 +2,9 @@
 # -----------------------------------------------------------------------------
 # USER CODE TUNNEL SETTINGS
 # -----------------------------------------------------------------------------
-#SBATCH --output=~/era-bench-vllm.out
-#SBATCH --error=~/era-bench-vllm.err
-#SBATCH --time=05:00:00
+#SBATCH --output=era-bench-vllm-%j.out
+#SBATCH --error=era-bench-vllm-%j.err
+#SBATCH --time=08:00:00
 
 # Account / partition
 #SBATCH --account=gratis
