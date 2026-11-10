@@ -112,7 +112,10 @@ def run_evaluation(config: EvaluationConfig) -> dict[str, Any]:
                         ],
                         video_format=config.evaluation.video_format,
                         video_cache_dir=video_cache_dir,
-                        video_cache_namespace=cache_namespace,
+                        video_cache_namespace=(
+                            f"{cache_namespace}:"
+                            f"{dataset.samples[index].file_path.resolve()}"
+                        ),
                         frame_stride=config.dataset.frame_stride,
                         fps=config.dataset.sampled_fps,
                     )

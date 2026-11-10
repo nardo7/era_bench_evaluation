@@ -143,8 +143,11 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
         if video_cache_dir_raw is not None
         else None
     )
-    if video_cache_dir is not None and not video_cache_dir.exists():
-        raise ValueError(f"evaluation.video_cache_dir does not exist: {video_cache_dir}")
+    if video_cache_dir is not None and not video_cache_dir.is_dir():
+        raise ValueError(
+            "evaluation.video_cache_dir does not exist or is not a directory: "
+            f"{video_cache_dir}"
+        )
     cameras_raw = evaluation_raw.get("cameras", ["table_cam"])
     if isinstance(cameras_raw, str):
         cameras_raw = [cameras_raw]
