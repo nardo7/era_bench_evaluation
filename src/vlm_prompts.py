@@ -1,4 +1,4 @@
-"""Composable prompt construction for ERA Bench evaluations."""
+"""Composable prompt construction for ERA-Bench Eval."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from src.vlm_actions import (
 from src.vlm_preprocessing import VLMDemonstration, VLMTaskInput, describe_action
 
 EMBODIED_CORE_PROMPT = (
-    "You solve embodied ARC tasks from solved robot demonstrations.\n"
+    "You solve ARC-Embodied tasks from solved robot demonstrations.\n"
 )
 
 TEXTUAL_CORE_PROMPT = """You solve ARC tasks from solved grid demonstrations.

@@ -60,7 +60,7 @@ def test_response_schema_matches_rule_summary_setting(
 
 
 EXPECTED_EMBODIED_CORE = (
-    "You solve embodied ARC tasks from solved robot demonstrations.\n"
+    "You solve ARC-Embodied tasks from solved robot demonstrations.\n"
 )
 
 EXPECTED_GRID_CORE = """You solve ARC tasks from solved grid demonstrations.

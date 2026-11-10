@@ -1,6 +1,6 @@
-# Evaluation configuration reference
+# ERA-Bench Eval configuration reference
 
-Each YAML file in this directory defines one evaluation run and, for local
+Each YAML file in this directory defines one ERA-Bench Eval run and, for local
 backends, the command used to start its model server. Copy an existing file,
 adjust it for your dataset and endpoint, then pass it to `serve_vllm.py` and/or
 `evaluate_vlm.py` from the repository root.
@@ -53,6 +53,11 @@ evaluation:
   continue_on_error: false
   prompt_mode: embodied
   include_frames: true
+  # jpeg_frames sends the frames encoded in a video url. mp4 encodes the frames into a mp4 video url
+  video_format: jpeg_frames
+  # Optional persistent cache for MP4 demonstration encodings. It must already
+  # exist; if omitted, the evaluator uses <output_dir>/video_cache.
+  # video_cache_dir: ../cache/era_bench_videos
   include_final_frames: false
   include_textual_grids: false
   include_actions: false
@@ -67,8 +72,8 @@ the example above, except where noted below.
 
 ## Dataset
 
-`dataset.paths` is one HDF5 path or a non-empty list of paths. The evaluator
-discovers task views in every listed file. The files must already contain the
+`dataset.paths` is one ARC-Embodied HDF5 path or a non-empty list of paths.
+The evaluator discovers task views in every listed file. The files must already contain the
 task-centric views described in
 [HDF5 preparation and layout](../docs/architecture.md#hdf5-preparation-and-layout).
 
@@ -76,6 +81,20 @@ task-centric views described in
 it must be at least 1. `sampled_fps` is positive and describes the sampled
 sequence. It is not sent to the model processor, so keep any
 backend-specific video-FPS request override consistent with it.
+
+## Video representation and cache
+
+`evaluation.video_format` defaults to `jpeg_frames`, the comma-separated JPEG
+representation understood by the local Qwen/vLLM path. Set it to `mp4` for one
+standard `video/mp4` data URL per demonstration. MP4 uses `dataset.sampled_fps`
+as its playback FPS; this is separate from any model-specific processor sampling
+option in `generation.request_overrides`.
+
+MP4 demonstration encodings are cached as files. `evaluation.video_cache_dir`
+is optional and relative to the YAML file; when set, it must already exist.
+When omitted, the cache is created at `<evaluation.output_dir>/video_cache`.
+The evaluator still loads the selected HDF5 frames before using the cache, but
+cache hits avoid repeated MP4 encoding.
 
 ## Model and local server
 

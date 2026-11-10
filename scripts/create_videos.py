@@ -1,4 +1,4 @@
-"""Create missing per-demo MP4 files from RGB frames in an ERA Bench HDF5 dataset."""
+"""Create missing per-demo MP4 files from RGB frames in an ARC-Embodied HDF5 dataset."""
 
 from __future__ import annotations
 
@@ -264,7 +264,7 @@ def parse_args() -> argparse.Namespace:
         "--dataset",
         type=Path,
         default=DEFAULT_DATASET,
-        help=f"ERA Bench HDF5 dataset (default: {DEFAULT_DATASET})",
+        help=f"ARC-Embodied HDF5 dataset (default: {DEFAULT_DATASET})",
     )
     parser.add_argument(
         "--output-dir",

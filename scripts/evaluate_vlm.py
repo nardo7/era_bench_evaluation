@@ -1,4 +1,4 @@
-"""Run the configured embodied ARC VLM evaluation."""
+"""Run ERA-Bench Eval on the configured ARC-Embodied dataset."""
 
 from __future__ import annotations
 

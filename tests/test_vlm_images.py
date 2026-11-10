@@ -4,7 +4,11 @@ from io import BytesIO
 import torch
 from PIL import Image
 
-from src.vlm_images import frame_to_data_url, frames_to_video_data_url
+from src.vlm_images import (
+    frame_to_data_url,
+    frames_to_video_data_url,
+    mp4_file_to_data_url,
+)
 
 
 def test_encodes_ordered_jpeg_frames_as_one_video_data_url() -> None:
@@ -25,3 +29,10 @@ def test_encodes_ordered_jpeg_frames_as_one_video_data_url() -> None:
 def test_encodes_test_frame_as_png_image_url() -> None:
     frame = torch.zeros((3, 4, 3), dtype=torch.uint8)
     assert frame_to_data_url(frame).startswith("data:image/png;base64,")
+
+
+def test_reads_mp4_file_as_video_data_url(tmp_path) -> None:
+    video_path = tmp_path / "demo.mp4"
+    video_path.write_bytes(b"mp4 bytes")
+
+    assert mp4_file_to_data_url(video_path) == "data:video/mp4;base64,bXA0IGJ5dGVz"

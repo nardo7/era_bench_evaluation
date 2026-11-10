@@ -1,6 +1,10 @@
-# ERA Bench evaluation architecture
+# ERA-Bench Eval architecture
 
-This repository evaluates models on embodied ARC tasks recorded with Isaac Lab. Its current model adapter targets vision-language models served through an OpenAI-compatible vLLM or vllm-mlx endpoint.
+ERA-Bench Eval is the evaluation software for the ERA-Bench benchmark. It
+evaluates models on ARC-Embodied, the dataset generated with ERA-Bench Sim, the
+simulation suite built on Isaac Lab. Its current model adapter targets
+vision-language models served through an OpenAI-compatible vLLM or vllm-mlx
+endpoint.
 
 The central abstraction is not a single recorded episode. It is one ARC task sample: all solved demonstrations for a task plus one held-out test pair. If an ARC task has multiple test pairs, the dataset exposes one sample per test pair and reuses the same demonstrations.
 
@@ -8,9 +12,9 @@ The central abstraction is not a single recorded episode. It is one ARC task sam
 
 ```mermaid
 flowchart LR
-    A[(Isaac Lab episode groups)] --> B[create_task_views.py]
+    A[(ERA-Bench Sim episode groups)] --> B[create_task_views.py]
     R[Inferred rules JSON] --> C[integrate_rule_claims.py]
-    C --> H[(ERA Bench HDF5)]
+    C --> H[(ARC-Embodied HDF5)]
     B --> H
     H --> D[ArcTaskDataset]
     Y[Evaluation YAML] --> D
@@ -164,8 +168,13 @@ location_type: 0=reserve,   1=output grid
 ### 4. Multimodal prompt construction
 
 `src/vlm_images.py` converts a standard demonstration frame sequence into the
-Qwen/vLLM in-memory video representation: a `data:video/jpeg;base64,...` URL
-containing comma-separated JPEG payloads. Videos always use `table_cam`. The
+configured video representation. The default local Qwen/vLLM representation is
+a `data:video/jpeg;base64,...` URL containing comma-separated JPEG payloads;
+the optional MP4 representation is a standard `data:video/mp4;base64,...` URL
+for compatible hosted providers. MP4 demonstration files are cached using the
+source dataset fingerprint, task, frame stride, and playback FPS. The evaluator
+still loads selected HDF5 frames before a cache lookup, so the cache removes
+repeat encoding rather than dataset reads. Videos always use `table_cam`. The
 final-frame ablation encodes the last frame from each selected camera as a PNG;
 test images always use the first selected frame from each selected camera.
 
@@ -224,12 +233,30 @@ description field and its prompt scaffold. It defaults to `false`.
 `VLLMClient` uses the standard-library HTTP client to call `<base_url>/chat/completions`. It can therefore target either local vLLM or a hosted OpenAI-compatible provider such as OpenRouter. It adds configured sampling fields, an optional seed, arbitrary request overrides, and an OpenAI-style strict JSON schema when structured output is enabled. The small internal Pydantic response models validate only the response surface the evaluator consumes. The configuration loader first reads an optional dotenv file without replacing shell-provided values, so hosted credentials can be named with `server.api_key_env_name`; it fails before evaluation if that environment variable is unset. `HF_TOKEN` loaded this way is inherited by local vLLM for private or gated Hugging Face models.
 
 The comma-separated JPEG `data:video/jpeg` representation is specific to the
-local vLLM/Qwen processor path. Hosted providers may require standard video
-content types and model-specific routing. The `include_final_frames`
+local vLLM/Qwen processor path. `evaluation.video_format: mp4` uses a standard
+video MIME type for hosted providers that accept MP4 inputs, while retaining the
+same prompt content and target-safe preprocessing. Hosted providers still have
+model-specific routing requirements. The `include_final_frames`
 mode uses ordinary PNG `image_url` content and is the portable visual option for
 OpenRouter-compatible image models.
 
 The CUDA configuration passes video sampling through `mm_processor_kwargs.fps`. The MLX configuration uses its different request and server option names. `dataset.sampled_fps` is currently descriptive configuration; it is not automatically copied into the request. Keep it consistent with the relevant generation override.
+
+The client retries explicit transient endpoint errors up to three times, waiting
+2, 4, then 8 seconds. These include HTTP 408/429/500/502/503/504 and JSON error
+envelopes carrying those status codes or `provider_unavailable` /
+`rate_limit_exceeded`, even when the HTTP status is 200. Every retry reuses the
+same serialized request, including provider constraints and seed. Retry warnings
+and the final exception include the upstream error and, for JSON error
+envelopes, the generation ID. Authentication/request errors, malformed
+completion responses, non-timeout transport errors, and model answers that fail
+scoring are not retried. Socket timeouts while waiting for HTTP headers or reading
+the response body are retried with the same budget, including timeouts wrapped
+in `URLError`. Each attempt uses `server.timeout_seconds` as its socket timeout;
+it is not a deadline for the entire evaluation or all retries. A timed-out request
+may still have run on the provider and incurred a charge, so retrying cannot
+guarantee exactly-once execution. This does not add resume support to evaluation
+artifacts.
 
 ### 6. Scoring and persistence
 

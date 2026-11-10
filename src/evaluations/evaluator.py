@@ -1,4 +1,4 @@
-"""End-to-end embodied ARC VLM evaluation loop."""
+"""End-to-end ERA-Bench Eval loop for ARC-Embodied."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from src.datasets import (
     ArcTaskDataset,
     uniform_frame_indices,
 )
-from src.evaluations.evaluation_config import EvaluationConfig
+from src.evaluations.evaluation_config import EvaluationConfig, VideoFormat
 from src.evaluations.evaluation_metrics import (
     SampleScore,
     aggregate_scores,
@@ -23,9 +23,10 @@ from src.evaluations.evaluation_metrics import (
 )
 from src.vllm import VLLMClient
 from src.vlm_images import (
+    demonstration_video_data_urls,
     frame_to_data_url,
-    frames_to_video_data_url,
     upscale_rgb_frames,
+    video_cache_namespace,
 )
 from src.vlm_preprocessing import prepare_vlm_task
 from src.vlm_prompts import (
@@ -70,7 +71,13 @@ def run_evaluation(config: EvaluationConfig) -> dict[str, Any]:
         config.evaluation.induce_scene_descriptions,
         config.evaluation.include_final_frames,
         config.evaluation.cameras,
+        config.evaluation.video_format,
     )
+    video_cache_dir = (
+        config.evaluation.video_cache_dir
+        or config.evaluation.output_dir / "video_cache"
+    )
+    cache_namespace = video_cache_namespace(config.dataset.paths)
     results_path = config.evaluation.output_dir / f"results_{artifact_suffix}.jsonl"
     with results_path.open("w", encoding="utf-8") as results_file:
         for index in range(sample_count):
@@ -97,12 +104,21 @@ def run_evaluation(config: EvaluationConfig) -> dict[str, Any]:
                 demonstration_final_image_urls = None
                 test_image_url = None
                 if include_frames:
-                    demonstration_video_urls = [
-                        frames_to_video_data_url(
-                            sample.demonstrations[demo_index].table_cam_rgb_frames
-                        )
-                        for demo_index in range(len(task_input.demonstrations))
-                    ]
+                    demonstration_video_urls = demonstration_video_data_urls(
+                        task_id=sample.task_id,
+                        frames=[
+                            demonstration.table_cam_rgb_frames
+                            for demonstration in sample.demonstrations
+                        ],
+                        video_format=config.evaluation.video_format,
+                        video_cache_dir=video_cache_dir,
+                        video_cache_namespace=(
+                            f"{cache_namespace}:"
+                            f"{dataset.samples[index].file_path.resolve()}"
+                        ),
+                        frame_stride=config.dataset.frame_stride,
+                        fps=config.dataset.sampled_fps,
+                    )
                 if include_final_frames:
                     demonstration_final_image_urls = [
                         [
@@ -188,6 +204,7 @@ def run_evaluation(config: EvaluationConfig) -> dict[str, Any]:
                     "induce_rule_summary": induce_rule_summary,
                     "induce_scene_descriptions": induce_scene_descriptions,
                     "include_final_frames": include_final_frames,
+                    "video_format": config.evaluation.video_format,
                     "cameras": list(config.evaluation.cameras),
                     "include_textual_grids": include_textual_grids,
                     "response_text": completion.text,
@@ -233,6 +250,7 @@ def run_evaluation(config: EvaluationConfig) -> dict[str, Any]:
                     "induce_rule_summary": induce_rule_summary,
                     "induce_scene_descriptions": induce_scene_descriptions,
                     "include_final_frames": include_final_frames,
+                    "video_format": config.evaluation.video_format,
                     "cameras": list(config.evaluation.cameras),
                     "include_textual_grids": include_textual_grids,
                     "error": f"{type(error).__name__}: {error}",
@@ -258,6 +276,7 @@ def run_evaluation(config: EvaluationConfig) -> dict[str, Any]:
         "induce_rule_summary": config.evaluation.induce_rule_summary,
         "induce_scene_descriptions": config.evaluation.induce_scene_descriptions,
         "include_final_frames": config.evaluation.include_final_frames,
+        "video_format": config.evaluation.video_format,
         "cameras": list(config.evaluation.cameras),
         "include_textual_grids": config.evaluation.include_textual_grids,
         "requested_sample_count": sample_count,
@@ -300,12 +319,16 @@ def _artifact_suffix(
     induce_scene_descriptions: bool,
     include_final_frames: bool,
     cameras: tuple[str, ...],
+    video_format: VideoFormat,
 ) -> str:
     """Name every prompt-context combination distinctly for comparisons."""
     contexts = [
         name
         for name, enabled in (
-            ("videos", include_frames),
+            (
+                "videos" if video_format is VideoFormat.JPEG_FRAMES else "mp4_videos",
+                include_frames,
+            ),
             ("final_frames", include_final_frames),
             ("grids", include_textual_grids),
             ("actions", include_actions),

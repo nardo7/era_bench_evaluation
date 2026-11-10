@@ -3,6 +3,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+
 from src.evaluations.evaluation_config import (
     DatasetConfig,
     EvaluationConfig,
@@ -10,6 +11,7 @@ from src.evaluations.evaluation_config import (
     GenerationConfig,
     ModelConfig,
     ServerConfig,
+    VideoFormat,
 )
 from src.evaluations.evaluator import run_evaluation
 from src.vllm.vllm_client import CompletionResult
@@ -110,6 +112,57 @@ def test_runs_end_to_end_with_a_stubbed_completion(tmp_path: Path, monkeypatch) 
     assert record["usage"]["prompt_tokens"] == 10
 
 
+def test_reuses_cached_mp4_demonstration_encoding(
+    tmp_path: Path, monkeypatch
+) -> None:
+    dataset_path = tmp_path / "dataset.hdf5"
+    _write_dataset(dataset_path)
+    encoded_paths: list[Path] = []
+
+    def fake_encode(frames, *, fps, output_path):
+        assert len(frames) == 2
+        assert fps == 1.0
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"fake mp4")
+        encoded_paths.append(output_path)
+
+    def fake_complete(_self, messages, *, response_schema, request_overrides=None):
+        video_part = next(
+            part for part in messages[1]["content"] if part.get("type") == "video_url"
+        )
+        assert video_part["video_url"]["url"] == "data:video/mp4;base64,ZmFrZSBtcDQ="
+        return CompletionResult(
+            text=(
+                '{"rule_summary": "Copy the red input cube to output column 1.", "actions": ['
+                '{"phase": "grasp", "color_id": 2, "location_type": "reserve", "row": -1, "column": -1},'
+                '{"phase": "place", "color_id": 2, "location_type": "output", "row": 0, "column": 1}'
+                "]}"
+            ),
+            response={},
+        )
+
+    monkeypatch.setattr("src.vlm_images.frames_to_mp4_file", fake_encode)
+    monkeypatch.setattr("src.evaluations.evaluator.VLLMClient.complete", fake_complete)
+    config = EvaluationConfig(
+        dataset=DatasetConfig(paths=[dataset_path], frame_stride=2, sampled_fps=1.0),
+        model=ModelConfig(model_id="test", served_name="test"),
+        server=ServerConfig(),
+        generation=GenerationConfig(),
+        evaluation=EvaluationRunConfig(
+            output_dir=tmp_path / "output",
+            video_format=VideoFormat.MP4,
+        ),
+    )
+
+    first_summary = run_evaluation(config)
+    second_summary = run_evaluation(config)
+
+    assert len(encoded_paths) == 1
+    assert encoded_paths[0].is_file()
+    assert first_summary["video_format"] == "mp4"
+    assert second_summary["video_format"] == "mp4"
+
+
 def test_runs_grid_focused_evaluation_without_media(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -130,7 +183,7 @@ def test_runs_grid_focused_evaluation_without_media(
 
     monkeypatch.setattr("src.evaluations.evaluator.VLLMClient.complete", fake_complete)
     monkeypatch.setattr(
-        "src.evaluations.evaluator.frames_to_video_data_url",
+            "src.vlm_images.frames_to_video_data_url",
         lambda _frames: (_ for _ in ()).throw(AssertionError("video encoding called")),
     )
     monkeypatch.setattr(
@@ -195,7 +248,7 @@ def test_runs_grid_focused_evaluation_with_final_images(
 
     monkeypatch.setattr("src.evaluations.evaluator.VLLMClient.complete", fake_complete)
     monkeypatch.setattr(
-        "src.evaluations.evaluator.frames_to_video_data_url",
+            "src.vlm_images.frames_to_video_data_url",
         lambda _frames: (_ for _ in ()).throw(AssertionError("video encoding called")),
     )
     encoded_frame_values: list[int] = []

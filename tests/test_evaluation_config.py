@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+
 from src.evaluations import load_evaluation_config
 from src.vllm.vllm_server import build_vllm_command
 
@@ -53,6 +54,68 @@ evaluation:
         command[command.index("--limit-mm-per-prompt") + 1] == '{"image":1,"video":3}'
     )
     assert "--allowed-local-media-path" not in command
+
+
+def test_loads_mp4_video_format_and_cache_path(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache/videos"
+    cache_dir.mkdir(parents=True)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+dataset:
+  paths: [dataset.hdf5]
+model:
+  id: hosted-model
+evaluation:
+  output_dir: output
+  video_format: mp4
+  video_cache_dir: cache/videos
+""".strip(),
+        encoding="utf-8",
+    )
+
+    config = load_evaluation_config(config_path)
+
+    assert config.evaluation.video_format == "mp4"
+    assert config.evaluation.video_cache_dir == cache_dir.resolve()
+
+
+def test_rejects_unknown_video_format(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+dataset:
+  paths: [dataset.hdf5]
+model:
+  id: hosted-model
+evaluation:
+  output_dir: output
+  video_format: frames
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="VideoFormat"):
+        load_evaluation_config(config_path)
+
+
+def test_rejects_missing_video_cache_directory(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+dataset:
+  paths: [dataset.hdf5]
+model:
+  id: hosted-model
+evaluation:
+  output_dir: output
+  video_cache_dir: missing-cache
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="video_cache_dir does not exist"):
+        load_evaluation_config(config_path)
 
 
 def test_loads_vllm_mlx_request_dialect(tmp_path: Path) -> None:

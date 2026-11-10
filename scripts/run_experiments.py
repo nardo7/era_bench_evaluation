@@ -20,45 +20,17 @@ GRID_FOCUSED_EXPERIMENTS = (
     {
         "induce_rule_summary": False,
         "include_frames": False,
-        "include_actions": False,
         "include_final_frames": False,
+        "induce_scene_descriptions": False,
+        "include_actions": False,
     },
-    # {
-    #     "induce_rule_summary": True,
-    #     "include_frames": False,
-    #     "include_actions": False,
-    #     "include_final_frames": False,
-    # },
-    # {
-    #     "induce_rule_summary": False,
-    #     "include_frames": True,
-    #     "include_actions": False,
-    #     "include_final_frames": False,
-    # },
-    # {
-    #     "induce_rule_summary": True,
-    #     "include_frames": True,
-    #     "include_actions": False,
-    #     "include_final_frames": False,
-    # },
-    # {
-    #     "induce_rule_summary": False,
-    #     "include_frames": False,
-    #     "include_actions": False,
-    #     "include_final_frames": True,
-    # },
-    # {
-    #     "induce_rule_summary": True,
-    #     "include_frames": False,
-    #     "include_actions": False,
-    #     "include_final_frames": True,
-    # },
-    # {
-    #     "induce_rule_summary": True,
-    #     "include_frames": True,
-    #     "include_actions": True,
-    #     "include_final_frames": False,
-    # },
+    {
+        "induce_rule_summary": False,
+        "include_frames": False,
+        "include_final_frames": False,
+        "induce_scene_descriptions": False,
+        "include_actions": True,
+    },
 )
 
 # Embodied prompts always include actions, and need either frames or textual grids.
@@ -85,41 +57,13 @@ EMBODIED_EXPERIMENTS = (
         "include_final_frames": True,
         "induce_scene_descriptions": True,
     },
-    # {
-    #     "induce_rule_summary": False,
-    #     "include_frames": False,
-    #     "include_textual_grids": True,
-    #     "include_final_frames": False,
-    #     "induce_scene_descriptions": False,
-    # },
-    # {
-    #     "induce_rule_summary": False,
-    #     "include_frames": False,
-    #     "include_textual_grids": False,
-    #     "include_final_frames": True,
-    #     "induce_scene_descriptions": False,
-    # },
-    # {
-    #     "induce_rule_summary": False,
-    #     "include_frames": False,
-    #     "include_textual_grids": True,
-    #     "include_final_frames": True,
-    #     "induce_scene_descriptions": False,
-    # },
-    # {
-    #     "induce_rule_summary": True,
-    #     "include_frames": False,
-    #     "include_textual_grids": False,
-    #     "include_final_frames": True,
-    #     "induce_scene_descriptions": True,
-    # },
-    # {
-    #     "induce_rule_summary": True,
-    #     "include_frames": False,
-    #     "include_textual_grids": True,
-    #     "include_final_frames": True,
-    #     "induce_scene_descriptions": True,
-    # },
+    {
+        "induce_rule_summary": False,
+        "include_frames": True,
+        "include_textual_grids": False,
+        "include_final_frames": True,
+        "induce_scene_descriptions": False,
+    },
 )
 
 EXPERIMENTS_BY_PROMPT_MODE = {

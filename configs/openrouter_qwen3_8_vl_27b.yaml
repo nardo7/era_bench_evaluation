@@ -1,6 +1,6 @@
 dataset:
   paths:
-    - ../data/era_bench_cleaned.hdf5
+    - ../data/arc_embodied3.hdf5
   frame_stride: 20
   sampled_fps: 1.0
 
@@ -24,11 +24,9 @@ generation:
   max_tokens_field: max_tokens
   temperature: 0.0
   top_p: 1.0
-  # seed: 0
+  seed: 0
   structured_output: true
   request_overrides:
-    # Route only to endpoints that support requested parameters such as the
-    # JSON schema response format used by this evaluator.
     provider:
       require_parameters: true
     reasoning:
@@ -46,6 +44,7 @@ evaluation:
   include_final_frames: true
   include_textual_grids: false
   include_actions: true
-  output_dir: ../outputs/openrouter_qwen3_8_27b_cleaned
+  output_dir: ../outputs/openrouter_qwen3_8_27b_arc3
   max_samples: 77
   continue_on_error: false
+  video_format: mp4
