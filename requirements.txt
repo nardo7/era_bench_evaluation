@@ -1,7 +1,9 @@
 h5py
+numpy
 pillow
-pydantic
+pydantic>=2
 PyYAML
 torch
 imageio[ffmpeg]
 ruff
+pytest

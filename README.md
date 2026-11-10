@@ -26,6 +26,14 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+Task-view preparation and the full test suite also require the separate
+`arc-utils` package. With the sibling `arc_utils` checkout available, install it
+from the evaluation repository root:
+
+```bash
+python -m pip install -e ../arc_utils
+```
+
 For a local vLLM inference host, also install:
 
 ```bash
